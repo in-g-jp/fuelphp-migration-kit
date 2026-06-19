@@ -1,0 +1,316 @@
+1. Backward Incompatible Changes
+========================================
+
+- Core:
+  . Programs that were very close to overflowing the call stack may now throw an
+    Error when using more than
+    `zend.max_allowed_stack_size-zend.reserved_stack_size` bytes of stack
+    (`fiber.stack_size-zend.reserved_stack_size` for fibers).
+  . Executing proc_get_status() multiple times will now always return the right
+    value on posix systems. Previously, only the first call of the function
+    returned the right value. Executing proc_close() after proc_get_status()
+    will now also return the right exit code. Previously this would return -1.
+    Internally, this works by caching the result on posix systems. If you want
+    the old behaviour, you can check the "cached" key in the array returned by
+    proc_get_status() to check whether the result was cached.
+  . Zend Max Execution Timers is now enabled by default for ZTS builds on
+    Linux.
+  . Uses of traits with static properties will now redeclare static properties
+    inherited from the parent class. This will create a separate static
+    property storage for the current class. This is analogous to adding the
+    static property to the class directly without traits.
+  . Assigning a negative index n to an empty array will now make sure that the
+    next index is n+1 instead of 0.
+  . Class constant visibility variance is now correctly checked when inherited
+    from interfaces.
+  . WeakMaps entries whose key maps to itself (possibly transitively) may now
+    be removed during cycle collection if the key is not reachable except by
+    iterating over the WeakMap (reachability via iteration is considered weak).
+    Previously, such entries would never be automatically removed.
+  . In addition to whitespace characters, now comments are allowed between
+    `yield` and `from`. The whole "construct" (e.g. `yield /* comment */ from`)
+    is reported as a single `T_YIELD_FROM` token by the tokenizer.
+
+- DOM:
+  . DOMChildNode::after(), DOMChildNode::before(), DOMChildNode::replaceWith()
+    on a node that has no parent is now a no-op instead of a hierarchy
+    exception, which is the behaviour spec demands.
+  . Using the DOMParentNode and DOMChildNode methods without a document now
+    works instead of throwing a HIERARCHY_REQUEST_ERR DOMException. This is in
+    line with the behaviour spec demands.
+  . createAttributeNS() without specifying a prefix would incorrectly create
+    a default namespace, placing the element inside the namespace instead of
+    the attribute. This bug is now fixed.
+  . createAttributeNS() would previously incorrectly throw a NAMESPACE_ERR
+    when the prefix was already used for a different uri. It now correctly
+    chooses a different prefix when there's a prefix name conflict.
+  . New methods and properties were added to some DOM classes. If you inherit
+    from these and you happen to have a method or property with the same name,
+    you might encounter errors if the declaration is incompatible.
+    Consult sections 2. New Features and 6. New Functions for a list of
+    newly implemented methods and properties.
+
+- FFI:
+  . C functions that have a return type of void now return null instead of
+    returning the following object object(FFI\CData:void) { }
+
+- Opcache:
+  . The opcache.consistency_checks INI directive was removed. This feature was
+    broken with the tracing JIT, as well as with inheritance cache, and has
+    been disabled without a way to enable it since PHP 8.1.18 and PHP 8.2.5.
+    Both the tracing JIT and inheritance cache may modify shm after the script
+    has been persisted by invalidating its checksum. The attempted fix skipped
+    over the modifiable pointers but was rejected due to complexity. For this
+    reason, it was decided to remove the feature instead.
+
+- Phar:
+  . The type of Phar class constants are now declared.
+
+- Standard:
+  . The range() function has had various changes:
+    * A TypeError is now thrown when passing objects, resources, or arrays
+      as the boundary inputs
+    * A more descriptive ValueError is thrown when passing 0 for $step
+    * A ValueError is now thrown when using a negative $step for increasing ranges
+    * If $step is a float that can be interpreted as an int, it is now done so
+    * A ValueError is now thrown if any argument is infinity or NAN
+    * An E_WARNING is now emitted if $start or $end is the empty string.
+      The value continues to be cast to the value 0.
+    * An E_WARNING is now emitted if $start or $end has more than one byte,
+      only if it is a non-numeric string.
+    * An E_WARNING is now emitted if $start or $end is cast to an integer
+      because the other boundary input is a number. (e.g. range(5, 'z');)
+    * An E_WARNING is now emitted if $step is a float when trying to generate
+      a range of characters, except if both boundary inputs are numeric strings
+      (e.g. range('5', '9', 0.5); does not produce a warning)
+    * range() now produce a list of characters if one of the boundary inputs is
+      a string digit instead of casting the other input to int
+      (e.g. range('5', 'z');)
+  . The file() flags error check now catches all invalid flags. Notably
+    FILE_APPEND was previously silently accepted.
+
+- SNMP:
+  . The type of SNMP class constants are now declared.
+
+========================================
+4. Deprecated Functionality
+========================================
+
+- Core
+  . Using the ++ operator on empty, non-numeric, or non-alphanumeric strings
+    is now deprecated. Moreover, incrementing non-numeric strings is soft
+    deprecated and the new str_increment() function should be used instead.
+    RFC: https://wiki.php.net/rfc/saner-inc-dec-operators
+  . Using the -- operator on empty or non-numeric strings is now deprecated.
+    RFC: https://wiki.php.net/rfc/saner-inc-dec-operators
+  . Calling get_class() and get_parent_class() without arguments is now
+    deprecated.
+
+- DBA
+  . Calling dba_fetch() with $dba as the 3rd argument is now deprecated.
+
+- FFI
+  . Calling FFI::cast(), FFI::new(), and FFI::type() statically is now
+    deprecated.
+
+- Intl
+  . The U_MULTIPLE_DECIMAL_SEP*E*RATORS constant had been deprecated, using
+    the U_MULTIPLE_DECIMAL_SEP*A*RATORS instead is recommended.
+  . The NumberFormatter::TYPE_CURRENCY has been deprecated.
+
+- LDAP
+  . Calling ldap_connect() with separate hostname and port is deprecated.
+    RFC: https://wiki.php.net/rfc/deprecations_php_8_3#deprecate_calling_ldap_connect_with_2_parameters
+
+- MBString
+  . Passing a negative $width to mb_strimwidth() is now deprecated.
+
+- Phar
+  . Calling Phar::setStub() with a resource and a length is now deprecated.
+    Such calls should be replaced by:
+    $phar->setStub(stream_get_contents($resource));
+
+- Random
+  . The MT_RAND_PHP Mt19937 variant is deprecated.
+    RFC: https://wiki.php.net/rfc/deprecations_php_8_3#mt_rand_php
+
+- Standard:
+  . The assert_options() function is now deprecated.
+  . The ASSERT_ACTIVE, ASSERT_BAIL, ASSERT_CALLBACK, ASSERT_EXCEPTION, and
+    ASSERT_WARNING constants have been deprecated.
+    RFC: https://wiki.php.net/rfc/assert-string-eval-cleanup
+
+- SQLite3
+  . Using exceptions is now preferred, warnings will be removed in the future.
+    Calling SQLite3::enableExceptions(false) will trigger a depreciation
+    warning in this version.
+
+- Zip:
+  . The ZipArchive::FL_RECOMPRESS constant is deprecated and will be removed
+    in a future version of libzip
+
+========================================
+5. Changed Functions
+========================================
+
+- Core:
+  . gc_status() has added the following 8 fields:
+    "running" => bool
+    "protected" => bool
+    "full" => bool
+    "buffer_size" => int
+    "application_time" => float: Total application time, in seconds (including
+    collector_time)
+    "collector_time" => float: Time spent collecting cycles, in seconds
+    (including destructor_time and free_time)
+    "destructor_time" => float: Time spent executing destructors during
+    cycle collection, in seconds
+    "free_time" => float: Time spent freeing values during cycle collection, in
+    seconds
+    See GH-9336, GH-11523
+  . class_alias() now supports creating an alias of an internal class.
+  . Setting `open_basedir` at runtime using `ini_set('open_basedir', ...);` no
+    longer accepts paths containing the parent directory (`..`). Previously,
+    only paths starting with `..` were disallowed. This could easily be
+    circumvented by prepending `./` to the path.
+  . User exception handlers now catch exceptions during shutdown.
+  . The resultant HTML of highlight_string and highlight_file has changed.
+    Whitespace between outer HTML tags is removed. Newlines and spaces
+    are no longer converted to HTML entities. The whole HTML is now wrapped in
+    <pre> tag. The outer <span> has been merged with <code>.
+
+- Calendar
+  . easter_date() now supports years from 1970 to 2,000,000,000 on 64-bit
+    systems, previously it only supported years in the range from 1970 to 2037.
+
+- Curl:
+  . curl_getinfo() now supports two new constants: CURLINFO_CAPATH and
+    CURLINFO_CAINFO. If option is null, the following two additional keys are
+    present: "capath" and "cainfo".
+
+- Dom:
+  . Changed DOMCharacterData::appendData() tentative return type to true.
+  . DOMDocument::loadHTML(), DOMDocument::loadHTMLFile(),
+    DOMDocument::loadXML() and DOMDocument::loadXMLFile() now have a tentative
+    return type of bool. Previously, this was documented as having a return
+    type of DOMDocument|bool, but DOMDocument cannot be returned since PHP 8.0
+    as it is no longer statically callable.
+
+- Gd:
+  . Changed imagerotate signature, removed the `ignore_transparent` argument
+    as it was not used internally anyway from PHP 7.x.
+
+- Intl:
+  . datefmt_set_timezone (and its alias IntlDateformatter::setTimeZone)
+    now returns true on success, previously null was returned.
+  . IntlBreakiterator::setText() now returns false on failure, previously
+    null was returned.
+    now returns true on success, previously null was returned.
+  . IntlChar::enumCharNames is now returning a boolean.
+    Previously it returned null on success and false on failure.
+  . IntlDateFormatter::construct throws an U_ILLEGAL_ARGUMENT_ERROR
+    exception when an invalid locale had been set.
+
+- MBString:
+  . mb_strtolower, mb_strtotitle, and mb_convert_case implement conditional
+    casing rules for the Greek letter sigma. For mb_convert_case, conditional
+    casing only applies to MB_CASE_LOWER and MB_CASE_TITLE modes, not to
+    MB_CASE_LOWER_SIMPLE and MB_CASE_TITLE_SIMPLE.
+  . mb_decode_mimeheader interprets underscores in QPrint-encoded MIME
+    encoded words as required by RFC 2047; they are converted to spaces.
+    Underscores must be encoded as "=5F" in such MIME encoded words.
+  . In rare cases, mb_encode_mimeheader will transfer-encode its input
+    string where it would pass it through as raw ASCII in PHP 8.2.
+  . mb_encode_mimeheader no longer drops NUL (zero) bytes when
+    QPrint-encoding the input string. This previously caused strings in
+    certain text encodings, especially UTF-16 and UTF-32, to be
+    corrupted by mb_encode_mimeheader.
+  . mb_detect_encoding's "non-strict" mode now behaves as described in the
+    documentation. Previously, it would return false if the same byte
+    (for example, the first byte) of the input string was invalid in all
+    candidate encodings. More generally, it would eliminate candidate
+    encodings from consideration when an invalid byte was seen, and if the
+    same input byte eliminated all remaining encodings still under
+    consideration, it would return false. On the other hand, if all candidate
+    encodings but one were eliminated from consideration, it would return the
+    last remaining one without regard for how many encoding errors might be
+    encountered later in the string. This is different from the behavior
+    described in the documentation, which says: "If strict is set to false,
+    the closest matching encoding will be returned."
+
+- mysqli:
+  . mysqli_fetch_object now raises a ValueError instead of an Exception when
+    the constructor_args argument is non empty with the class not having
+    constructor.
+  . mysqli_poll now raises a ValueError when the read nor error arguments are
+    passed.
+  . mysqli_field_seek and mysqli_result::field_seek now specify return type
+    as true instead of bool.
+
+- ODBC
+  . odbc_autocommit() now accepts null for the $enable parameter.
+    Passing null has the same behaviour as passing only 1 parameter,
+    namely indicating if the autocommit feature is enabled or not.
+
+- PGSQL:
+  . pg_fetch_object now raises a ValueError instead of an Exception when the
+    constructor_args argument is non empty with the class not having
+    constructor.
+  . pg_insert now raises a ValueError instead of a WARNING when the table
+    specified is invalid.
+  . pg_insert and pg_convert raises a ValueError or a TypeError instead of a
+    WARNING when the value/type of a field does not match properly with a
+    PostGreSQL's type.
+  . The $row param of pg_fetch_result(), pg_field_prtlen() and
+    pg_field_is_null() is now nullable.
+
+- Random:
+  . Changed mt_srand() and srand() to not check the number of arguments to
+    determine whether a random seed should be used. Passing null will generate
+    a random seed, 0 will use zero as the seed. The functions are now
+    consistent with Mt19937::__construct().
+
+- Reflection:
+  . Return type of ReflectionClass::getStaticProperties() is no longer nullable.
+  . Calling ReflectionProperty::setValue() with only one parameter is deprecated.
+    To set static properties, pass null as the first parameter.
+
+- Standard:
+  . E_NOTICEs emitted by unserialize() have been promoted to E_WARNING.
+    RFC: https://wiki.php.net/rfc/improve_unserialize_error_handling
+  . unserialize() now emits a new E_WARNING if the input contains unconsumed
+    bytes.
+    RFC: https://wiki.php.net/rfc/unserialize_warn_on_trailing_data
+  . array_pad() is now only limited by the maximum number of elements an array
+    can have. Before, it was only possible to add at most 1048576 elements at a
+    time.
+  . strtok() raises a warning in the case token is not provided when starting
+    tokenization.
+  . password_hash() will now chain the underlying Random\RandomException
+    as the ValueError’s $previous Exception when salt generation fails.
+  . proc_open() $command array must now have at least one non empty element.
+  . proc_open() returns false if $command array is invalid command instead of
+    resource object that produces warning later. This was already the case for
+    Windows but it is now also the case if posix_spawn implementation is in use
+    (most Linux, BSD and MacOS platforms). There are still some old platforms
+    where this behavior is not changed as posix_spawn is not supported there.
+  . array_sum() and array_product() now warn when values in the array cannot
+    be converted to int/float. Previously arrays and objects where ignored
+    whilst every other value was cast to int. Moreover, objects that define
+    a numeric cast (e.g. GMP) are now casted instead of ignored.
+    RFC: https://wiki.php.net/rfc/saner-array-sum-product
+  . number_format() $decimal parameter handles rounding to negative places. It
+    means that when $decimals is negative, $num is rounded to $decimals
+    significant digits before the decimal point. Previously negative $decimals
+    got silently ignored and the number got rounded to zero decimal places.
+  . The $before_needle argument added to strrchr() which works in the same way
+    like its counterpart in strstr() or stristr().
+  . str_getcsv() and fgetcsv() return empty string instead of a string with
+    a single zero byte for the last field which contains only unterminated
+    enclosure.
+
+========================================
+8. Removed Extensions and SAPIs
+========================================
+
+========================================
