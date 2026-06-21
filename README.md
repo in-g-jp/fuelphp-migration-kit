@@ -93,11 +93,9 @@ fork を `repositories` に配線:
 ```bash
 # 構文（暗黙 nullable もここで出る）
 find fuel/app -name '*.php' -print0 | xargs -0 -n1 php -l | grep -v 'No syntax'
-# 自動修正候補（適用前にレビュー）。xdebug は切ると速い
-php -d xdebug.mode=off vendor/bin/rector process fuel/app --dry-run
 ```
 
-**検知は allow-list でなく「全セット ON + 近代化を skip」。** `withRules([...])` で移行必須ルールだけ挙げる方式は、設定済み汎用ルール（`RemoveFuncCallRector`=`curl_close` 削除 / `RenameFunctionRector`=`mysqli_execute`→… / `RenameCastRector`=`(integer)`→`(int)` 等）を取りこぼす。全 ON にして cosmetic だけ外せば、設定済み/新規ルールも必ず拾える:
+Rector の **検知は allow-list でなく「全セット ON + 近代化を skip」。** `withRules([...])` で移行必須ルールだけ挙げる方式は、設定済み汎用ルール（`RemoveFuncCallRector`=`curl_close` 削除 / `RenameFunctionRector`=`mysqli_execute`→… / `RenameCastRector`=`(integer)`→`(int)` 等）を取りこぼす。全 ON にして cosmetic だけ外せば、設定済み/新規ルールも必ず拾える:
 ```php
 // rector_migrate.php — 8.5まで全セット ON、cosmetic だけ skip
 return RectorConfig::configure()
@@ -133,7 +131,7 @@ php -d xdebug.mode=off vendor/bin/rector process --config rector_migrate.php --d
 <details>
 <summary>3. 公式 UPGRADING 突合</summary>
 
-フェーズ 2 が拾わない**版固有の Removed/Deprecated** を `upgrading/UPGRADING-*.txt` を元に grep。sniff 上限の補完。
+手順 2 が拾わない**版固有の Removed/Deprecated** を `upgrading/UPGRADING-*.txt` を元に grep。sniff 上限の補完。
 
 ```bash
 grep -rnE 'each\(|create_function\(|money_format\(' fuel/app   # 8.0 削除関数
@@ -155,7 +153,7 @@ grep -rnE 'curl_close\(|curl_multi_close\(|curl_share_close\(' fuel/app  # 8.5 n
 <details>
 <summary>4. ツールが取れない非互換</summary>
 
-2・3 を**両方すり抜ける**非互換。実機ログ・操作・レビューでしか出ず、フェーズ 5 で**炙って直す**。
+2・3 を**両方すり抜ける**非互換。実機ログ・操作・レビューでしか出ず、手順 5 で**炙って直す**。
 
 → 9 種の詳細は [`manual-fix.md`](manual-fix.md)。
 </details>
@@ -163,7 +161,7 @@ grep -rnE 'curl_close\(|curl_multi_close\(|curl_share_close\(' fuel/app  # 8.5 n
 <details>
 <summary>5. 実機チェック</summary>
 
-deprecation ログがゼロになるまで**フェーズ 4〜5 を反復**（2・3 は一度で完了）。
+deprecation ログがゼロになるまで**手順 4〜5 を反復**（2・3 は一度で完了）。
 `manual-fix.md` を片手に 9 種を炙る（`@` 抑制は巡回前に外す＝でないとログが嘘になる）。
 
 **方法は導線の種類に依らず同じ三手**:
