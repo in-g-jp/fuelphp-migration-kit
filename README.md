@@ -95,8 +95,7 @@ fork を `repositories` に配線:
 | PHPCompatibility | 非互換を列挙 | **ROI 低**。sniff ~8.1 上限で、実績上 fuel/app は全バージョン 0 件（framework ノイズのみ）。入れるなら global/隔離で十分 |
 | PHPStan / Psalm | 型・未定義・データフロー | アプリ層限定・baseline 運用 |
 
-**ツールの入れ方**: 解析ツールは「一度回して結果を反映したら終わり」なので、原則プロジェクトの `composer.json` を汚さない。
-ただし **Rector ^2 はスコープ配布で依存が実質 2 個**（symfony/php-parser を引かない）→ `require-dev` に入れても lock は汚れずクリーン。PHPCompatibility(phpcs)系は plugin 許可も要るので global/隔離が無難。
+**ツールの入れ方**: 使うツールは `require-dev` に入れる。**Rector ^2 はスコープ配布で依存が実質 2 個**（symfony/php-parser を引かない）ので require-dev に入れても lock は汚れない。PHPCompatibility(phpcs)系は ROI が低く plugin 許可も要るので、使う場合だけ global/隔離で。
 
 ```bash
 # 構文（暗黙 nullable もここで出る）
